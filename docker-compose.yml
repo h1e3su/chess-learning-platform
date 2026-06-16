@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: chess_postgres
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: rootpassword
+      POSTGRES_DB: chess_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - chess_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: chess_redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - chess_network
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: chess_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: root
+      RABBITMQ_DEFAULT_PASS: rootpassword
+    ports:
+      - "5672:5672" # Port giao tiếp mặc định của RabbitMQ
+      - "15672:15672" # Port trang quản lý UI (Management UI)
+    restart: unless-stopped
+    networks:
+      - chess_network
+
+networks:
+  chess_network:
+    driver: bridge
+
+volumes:
+  postgres_data:

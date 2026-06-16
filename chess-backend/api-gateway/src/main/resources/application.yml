@@ -1,0 +1,73 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+      routes:
+        - id: user-service
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/api/users/**, /user-service/v3/api-docs/**
+          filters:
+            - RewritePath=/user-service/(?<segment>.*), /$\{segment}
+        - id: course-service
+          uri: lb://COURSE-SERVICE
+          predicates:
+            - Path=/api/courses/**, /course-service/v3/api-docs/**
+          filters:
+            - RewritePath=/course-service/(?<segment>.*), /$\{segment}
+        - id: payment-service
+          uri: lb://PAYMENT-SERVICE
+          predicates:
+            - Path=/api/payments/**, /payment-service/v3/api-docs/**
+          filters:
+            - RewritePath=/payment-service/(?<segment>.*), /$\{segment}
+        - id: game-service
+          uri: lb://GAME-SERVICE
+          predicates:
+            - Path=/api/games/**, /game-service/v3/api-docs/**
+          filters:
+            - RewritePath=/game-service/(?<segment>.*), /$\{segment}
+        - id: notification-service
+          uri: lb://NOTIFICATION-SERVICE
+          predicates:
+            - Path=/api/notifications/**, /notification-service/v3/api-docs/**
+          filters:
+            - RewritePath=/notification-service/(?<segment>.*), /$\{segment}
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+
+springdoc:
+  swagger-ui:
+    urls:
+      - name: User API
+        url: /user-service/v3/api-docs
+      - name: Course API
+        url: /course-service/v3/api-docs
+      - name: Payment API
+        url: /payment-service/v3/api-docs
+      - name: Game API
+        url: /game-service/v3/api-docs
+      - name: Notification API
+        url: /notification-service/v3/api-docs
+
+
