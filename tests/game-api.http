@@ -1,0 +1,40 @@
+# =============================================
+# GAME SERVICE API TESTS
+# Base URL: http://localhost:8080 (qua Gateway)
+# =============================================
+
+### 1. Lấy danh sách tất cả Ván Đấu
+GET http://localhost:8080/api/games
+Accept: application/json
+
+### 2. Lấy chi tiết 1 Ván Đấu theo UUID (thay ID thật vào)
+GET http://localhost:8080/api/games/{{matchId}}
+Accept: application/json
+
+### 3. Tạo Ván Đấu mới
+POST http://localhost:8080/api/games
+Content-Type: application/json
+
+{
+  "whitePlayerId": "{{userId1}}",
+  "blackPlayerId": "{{userId2}}",
+  "timeControl": "10+0"
+}
+
+# =============================================
+# WEBSOCKET STOMP TEST (Manual)
+# =============================================
+# Bước 1: Mở Postman → New → WebSocket
+# Bước 2: Kết nối tới: ws://localhost:8084/ws/game
+# Bước 3: Subscribe kênh: /topic/match/test-match-001
+# Bước 4: Gửi JSON sau tới destination /app/game.move:
+#
+# {
+#   "matchId": "test-match-001",
+#   "playerId": "uuid-player-white",
+#   "fromSquare": "e2",
+#   "toSquare": "e4",
+#   "promotion": null
+# }
+#
+# Bước 5: Kiểm tra xem kênh /topic/match/test-match-001 có nhận được echo không.

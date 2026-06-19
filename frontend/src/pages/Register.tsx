@@ -20,15 +20,25 @@ export function Register() {
     setIsLoading(true);
 
     try {
-      // Mocking for now
-      // const data = await authApi.register({ username, email, password });
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Simulate auto login after register
-      login({ id: 2, username, email, elo: 1200, rank: 'Sắt III' }, 'fake-jwt-token-register');
+      // 1. Đăng ký tài khoản mới qua API thật
+      await authApi.register({ username, email, password });
+
+      // 2. Tự động đăng nhập ngay sau khi đăng ký thành công
+      const loginData = await authApi.login({ email, password });
+      login(
+        {
+          id: loginData.user.id,
+          username: loginData.user.username,
+          email: loginData.user.email,
+          elo: loginData.user.eloRating || 1200,
+          rank: 'Sắt III',
+        },
+        loginData.token
+      );
       navigate('/');
     } catch (err: any) {
-      setError(err.message || 'Đã có lỗi xảy ra trong quá trình đăng ký');
+      const msg = err.response?.data?.message || err.response?.data || err.message || 'Đã có lỗi xảy ra trong quá trình đăng ký';
+      setError(typeof msg === 'string' ? msg : 'Đã có lỗi xảy ra trong quá trình đăng ký');
     } finally {
       setIsLoading(false);
     }

@@ -1,0 +1,32 @@
+# =============================================
+# USER SERVICE API TESTS
+# Base URL: http://localhost:8080 (qua Gateway)
+# =============================================
+
+### 1. Lấy danh sách tất cả Users
+GET http://localhost:8080/api/users
+Accept: application/json
+
+### 2. Lấy thông tin 1 User theo UUID (thay ID thật vào)
+GET http://localhost:8080/api/users/{{userId}}
+Accept: application/json
+
+### 3. Đăng ký tài khoản mới
+POST http://localhost:8080/api/users
+Content-Type: application/json
+
+{
+  "username": "test_player_01",
+  "email": "testplayer01@chess.com",
+  "password": "Test@12345",
+  "fullName": "Test Player One"
+}
+
+### 4. Đăng nhập
+POST http://localhost:8080/api/users/login
+Content-Type: application/json
+
+{
+  "email": "testplayer01@chess.com",
+  "password": "Test@12345"
+}

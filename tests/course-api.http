@@ -1,0 +1,24 @@
+# =============================================
+# COURSE SERVICE API TESTS
+# Base URL: http://localhost:8080 (qua Gateway)
+# =============================================
+
+### 1. Lấy danh sách tất cả Khóa Học
+GET http://localhost:8080/api/courses
+Accept: application/json
+
+### 2. Lấy chi tiết 1 Khóa Học theo UUID (thay ID thật vào)
+GET http://localhost:8080/api/courses/{{courseId}}
+Accept: application/json
+
+### 3. Tạo Khóa Học mới
+POST http://localhost:8080/api/courses
+Content-Type: application/json
+
+{
+  "title": "Khai cuộc Sicilian Defense",
+  "description": "Khóa học chuyên sâu về khai cuộc Sicilian Defense dành cho người chơi trung cấp",
+  "instructorName": "GM Nguyễn Anh Khôi",
+  "price": 299000,
+  "level": "INTERMEDIATE"
+}

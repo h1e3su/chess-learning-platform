@@ -1,0 +1,24 @@
+# =============================================
+# NOTIFICATION SERVICE API TESTS
+# Base URL: http://localhost:8080 (qua Gateway)
+# =============================================
+
+### 1. Lấy danh sách tất cả Thông Báo
+GET http://localhost:8080/api/notifications
+Accept: application/json
+
+### 2. Lấy chi tiết 1 Thông Báo theo UUID (thay ID thật vào)
+GET http://localhost:8080/api/notifications/{{notificationId}}
+Accept: application/json
+
+### 3. Tạo Thông Báo mới (test thủ công)
+POST http://localhost:8080/api/notifications
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}",
+  "type": "SYSTEM",
+  "title": "Chào mừng bạn đến VantageChess!",
+  "message": "Tài khoản của bạn đã được kích hoạt thành công. Bắt đầu hành trình chinh phục cờ vua ngay hôm nay!",
+  "read": false
+}

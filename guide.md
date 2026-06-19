@@ -69,7 +69,7 @@ npm run dev
 - **Port**: `5433` (Đây là cổng public ra ngoài của Docker, không dùng cổng nội bộ 5432).
 - **Database**: `chess_db`
 - **Username**: `root`
-- **Password**: `rootpassword`
+- **Password**: `rootpassword`![alt text](image.png)
 
 *(Hoặc xem nhanh bằng dòng lệnh: `docker exec -it chess_postgres psql -U root -d chess_db`)*
 
@@ -200,6 +200,14 @@ Dưới đây là những "bài học xương máu" đã gặp phải và cách 
   3. Trong ứng dụng Figma Desktop, nhấn vào Menu ở góc trên trái (logo Figma) -> **Preferences** -> chọn **"Enable Dev Mode MCP Server"**.
   4. Khởi động lại IDE và thử kết nối lại.
 
+### 🐛 Bug 8: `course-service` / `notification-service` crash khi khởi động (`QueuesNotAvailableException`)
+- **Mô tả:** Khi chạy `start-all.ps1`, `course-service` và `notification-service` văng lỗi `NOT_FOUND - no queue 'course.payment.queue' in vhost '/'` và crash ngay lập tức.
+- **Nguyên nhân:** Hai service này có `@RabbitListener` lắng nghe hàng đợi (`course.payment.queue`, `notification.payment.queue`), nhưng các hàng đợi đó chỉ được khai báo (declare) bên `payment-service`. Nếu `payment-service` chưa khởi động trước hoặc chưa kịp tạo Queue, Consumer sẽ không tìm thấy Queue và crash.
+- **Cách khắc phục:**
+  1. Bổ sung `@Bean Queue` vào `RabbitMQConfig.java` của mỗi Consumer service.
+  2. Cụ thể: `course-service` tự khai báo `new Queue("course.payment.queue", true)`, `notification-service` tự khai báo `new Queue("notification.payment.queue", true)`.
+  3. Nhờ vậy, mỗi service sẽ tự tạo Queue nếu nó chưa tồn tại, bất kể thứ tự khởi chạy.
+
 ---
 
 ## 5. Lộ Trình Phát Triển (Roadmap)
@@ -219,6 +227,42 @@ Dưới đây là những "bài học xương máu" đã gặp phải và cách 
 - [ ] **WebSocket cho Game Service:** Viết luồng truyền nhận dữ liệu thời gian thực (real-time) cho các ván cờ.
 
 ### 5.3. Những việc SẼ PHẢI LÀM (To-do)
-- [ ] **Tích hợp Thư viện Cờ vua (Frontend):** Cài đặt `react-chessboard` và `chess.js` vào dự án React.
-- [ ] **Tích hợp Stockfish AI:** Cấu hình Stockfish engine trên backend để phục vụ chế độ đấu với Máy.
+- [x] **Tích hợp Thư viện Cờ vua (Frontend):** Cài đặt `react-chessboard` và `chess.js` vào dự án React.
+- [x] **Tích hợp Stockfish AI:** Cấu hình Stockfish engine trên backend (Python Worker + RabbitMQ RPC) để phục vụ chế độ đấu với Máy.
 - [ ] **Ánh xạ UI E-sports sang Flutter Mobile:** Tạo app mobile dùng codebase Dart bám sát thiết kế React.
+
+---
+
+## 6. Kiến Trúc & Tư Duy Thiết Kế (Architecture Patterns)
+
+### 6.1. Ám ảnh Re-render trong React & Giải pháp Tách Lớp
+Ứng dụng realtime bằng React rất dễ rơi vào "vòng lặp tử thần" (infinite loop) hoặc bị giật lag nếu không kiểm soát tốt việc render. Khi thiết kế trang PlayArena, chúng ta áp dụng tư duy:
+- **UI Layer (The Canvas):** Chỉ chịu trách nhiệm hiển thị trạng thái hiện tại (FEN) và bắt sự kiện kéo thả (onPieceDrop) từ thư viện `react-chessboard`.
+- **Logic Layer (The Brain):** Sử dụng `chess.js` giữ dưới dạng biến instance (bọc qua `useMemo` hoặc khai báo ngoài component) để tính toán luật cờ. `chess.js` không bao giờ trigger re-render trực tiếp.
+- **State Management:** Khi `chess.js` xác nhận nước đi hợp lệ, ta mới lấy FEN cập nhật vào React State (`setFen`). Việc này báo cho React biết: *"Này, dữ liệu thay đổi rồi, vẽ lại cái bàn cờ đi"*. Nếu sai luật, state không đổi, React không làm gì, bàn cờ tự giật quân về chỗ cũ.
+
+### 6.2. Tách biệt Socket Layer và Message STOMP
+- **STOMP (Simple Text Oriented Messaging Protocol):** Là giao thức giúp chúng ta gửi message có cấu trúc (header, body) qua WebSocket, tương tự như HTTP.
+- **Tách Lớp (Decoupling):** Không bao giờ nhét code `new SockJS()` hay `stompClient.connect()` trực tiếp vào trong component giao diện `PlayArena.tsx`. Chúng sẽ được tách ra một **Custom Hook** (ví dụ: `useGameSocket.ts`) hoặc **Zustand Store**.
+- **Luồng dữ liệu (Data Flow):** 
+  1. WebSocket nhận message từ server.
+  2. Socket Layer dịch message, kiểm tra hợp lệ.
+  3. Bơm nước đi mới vào `chess.js` (The Brain).
+  4. Lấy FEN mới đẩy vào State (UI Layer).
+=> UI không cần biết dữ liệu đến từ người chơi bấm chuột hay từ mạng internet.
+
+### 6.3. "Fail Fast, Fail Cheap" (Tiếp cận Offline First)
+Trước khi tốn thời gian code WebSocket hay AI phức tạp, chúng ta xây dựng chế độ Offline (2 người chơi trên 1 máy) để test độ ổn định của `chess.js` và UI trước.
+
+### 6.4. Xử lý Lỗi Tương Thích React & Quản lý Global State
+- **Downgrade React 18:** Phiên bản `react-chessboard@5.x` (sử dụng `@dnd-kit/core`) gặp lỗi nghiêm trọng với luồng ref của **React 19**, khiến bàn cờ bị "liệt" hoàn toàn sự kiện kéo thả (không throw error, không log). Giải pháp "đặc trị" là hạ cấp dự án xuống `React 18.3.1` và `react-chessboard@4.2.2`, đồng thời gỡ bỏ `<StrictMode>` ở `main.tsx` để tránh double-mount làm crash bộ dnd.
+- **Zustand cho Move History:** Vì `PlayArena` và `RightPanel` nằm ngang hàng (sibling) trong Layout, việc đồng bộ mảng PGN (`history`) được giải quyết thanh lịch bằng Global Store `useGameStore`. Nhờ vậy, RightPanel có thể tách thuật toán `reduce` để parse dữ liệu và hiển thị bảng lịch sử Real-time mượt mà, đúng chuẩn cờ vua.
+
+### 6.5. Kiến Trúc RPC AI với RabbitMQ & Python Worker
+Thay vì nhúng trực tiếp thư viện Stockfish Java vào `game-service` (dễ gây quá tải CPU cho toàn bộ Backend, block thread), chúng ta sử dụng kiến trúc RPC (Remote Procedure Call) kết hợp Microservices:
+- **Ngôn ngữ/Môi trường tối ưu:** Stockfish được chạy bằng `subprocess` trong một Docker container `stockfish-worker` sử dụng Python siêu nhẹ. Do container này độc lập với Java, nó không bị ảnh hưởng bởi Garbage Collector của JVM và có thể scale linh hoạt (thêm nhiều container Python khi đông người chơi đấu với AI).
+- **Giao tiếp qua Message Broker:** `game-service` gọi `rabbitTemplate.convertSendAndReceive()` để gửi chuỗi FEN vào hàng đợi `stockfish.jobs.queue`. Nó sẽ gán kèm một `correlation_id` (Mã vé dò) và một hàng đợi tạm thời (`reply_to`) để chờ kết quả.
+- **Python Worker xử lý & trả về:** Worker Python nhặt JSON, kích hoạt file nhị phân Stockfish Linux lấy `bestmove` (ví dụ `e7e5`), và bắn ngược kết quả vào hàng đợi `reply_to` với đúng mã `correlation_id`. Nhờ vậy, hàng chục yêu cầu song song từ nhiều user khác nhau không bao giờ bị lẫn lộn kết quả cờ.
+Thay vì code cả UI, Logic và Network cùng lúc, chúng ta làm UI và Logic chơi Offline (2 người chung 1 máy) trước. 
+- Giúp xác định ngay lỗi nếu có là do `chess.js` hay `react-chessboard`. 
+- Khi phần khung đã vững, việc cắm thêm WebSocket (Socket Layer) vào chỉ là việc thay thế nút bấm bằng tín hiệu mạng.

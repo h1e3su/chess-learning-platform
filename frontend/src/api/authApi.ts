@@ -20,8 +20,8 @@ export const authApi = {
   },
   
   register: async (data: RegisterPayload) => {
-    // This is a placeholder endpoint. Update when backend is ready.
-    const response = await axiosClient.post('/api/users/register', data);
+    // Backend endpoint: POST /api/users (CreateUserRequest)
+    const response = await axiosClient.post('/api/users', data);
     return response.data;
   }
 };

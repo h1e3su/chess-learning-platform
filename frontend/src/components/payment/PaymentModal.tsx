@@ -6,7 +6,6 @@ export function PaymentModal({ isOpen, onClose, courseTitle, price }: { isOpen: 
 
   useEffect(() => {
     if (isOpen) {
-      setLoading(true);
       // Simulate fake QR generation delay
       const timer = setTimeout(() => setLoading(false), 1500);
       return () => clearTimeout(timer);

@@ -38,6 +38,20 @@ services:
     networks:
       - chess_network
 
+  stockfish_worker:
+    build:
+      context: ./stockfish-worker
+    container_name: chess_stockfish_worker
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=root
+      - RABBITMQ_PASS=rootpassword
+    depends_on:
+      - rabbitmq
+    restart: unless-stopped
+    networks:
+      - chess_network
+
 networks:
   chess_network:
     driver: bridge

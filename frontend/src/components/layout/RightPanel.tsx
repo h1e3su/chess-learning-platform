@@ -1,7 +1,26 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Flag, Handshake } from 'lucide-react';
+import { useGameStore } from '../../store/useGameStore';
 
 export function RightPanel() {
+  const history = useGameStore(state => state.history);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Thuật toán "cắt khúc": Gộp mảng 1 chiều thành mảng 2 chiều [[Trắng, Đen], [Trắng, Đen]]
+  const movePairs = history.reduce((result: string[][], value, index, array) => {
+    if (index % 2 === 0) {
+      result.push(array.slice(index, index + 2));
+    }
+    return result;
+  }, []);
+
+  // Tự động cuộn xuống cuối cùng mỗi khi có nước đi mới
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [history]);
+
   return (
     <aside className="w-80 fixed h-screen right-0 bg-neutral-900 border-l border-neutral-800 flex flex-col z-10">
       {/* Tabs */}
@@ -17,38 +36,44 @@ export function RightPanel() {
       {/* Move History Table Header */}
       <div className="flex px-4 py-3 border-b border-neutral-800/50 text-xs font-bold text-neutral-500 tracking-wider">
         <div className="w-8">#</div>
-        <div className="flex-1">TRẮNG</div>
-        <div className="flex-1">ĐEN</div>
+        <div className="flex-1 text-center">TRẮNG</div>
+        <div className="flex-1 text-center">ĐEN</div>
       </div>
 
       {/* PGN History Content */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-1 bg-neutral-900/50">
-        {/* Row 1 */}
-        <div className="flex items-center px-2 py-2 hover:bg-neutral-800/50 rounded transition-colors group cursor-pointer">
-          <div className="w-8 text-neutral-500 text-sm">1.</div>
-          <div className="flex-1 font-semibold text-neutral-200 group-hover:text-white">e4</div>
-          <div className="flex-1 font-semibold text-neutral-200 group-hover:text-white">e5</div>
-        </div>
-        {/* Row 2 */}
-        <div className="flex items-center px-2 py-2 hover:bg-neutral-800/50 rounded transition-colors group cursor-pointer">
-          <div className="w-8 text-neutral-500 text-sm">2.</div>
-          <div className="flex-1 font-semibold text-neutral-200 group-hover:text-white">Nf3</div>
-          <div className="flex-1 font-semibold text-neutral-200 group-hover:text-white">Nc6</div>
-        </div>
-        {/* Row 3 */}
-        <div className="flex items-center px-2 py-2 hover:bg-neutral-800/50 rounded transition-colors group cursor-pointer">
-          <div className="w-8 text-neutral-500 text-sm">3.</div>
-          <div className="flex-1 font-semibold text-neutral-200 group-hover:text-white">Bb5</div>
-          <div className="flex-1 font-semibold text-emerald-400">a6</div>
-        </div>
-        {/* Row 4 (Current) */}
-        <div className="flex items-center px-2 py-2 bg-neutral-800/80 rounded border border-neutral-700/50 cursor-pointer">
-          <div className="w-8 text-neutral-400 text-sm font-medium">4.</div>
-          <div className="flex-1 font-bold text-white">Ba4</div>
-          <div className="flex-1 font-bold text-red-500 flex items-center gap-1">
-            Nf6 <span className="text-xs">??</span>
+      <div 
+        ref={scrollRef}
+        className="flex-1 p-2 overflow-y-auto custom-scrollbar bg-neutral-900/50"
+      >
+        {movePairs.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-sm text-neutral-500 italic">
+            Ván cờ chưa bắt đầu...
           </div>
-        </div>
+        ) : (
+          <table className="w-full text-sm text-left table-fixed">
+            <tbody>
+              {movePairs.map((pair, index) => (
+                <tr 
+                  key={index} 
+                  className="transition-colors hover:bg-neutral-800/80 group cursor-pointer"
+                >
+                  {/* Số thứ tự lượt đi */}
+                  <td className="w-8 py-2 pl-2 text-neutral-500 font-medium border-r border-neutral-800/50">
+                    {index + 1}.
+                  </td>
+                  {/* Nước đi của quân Trắng */}
+                  <td className="w-[45%] py-2 text-center font-bold text-neutral-300 group-hover:text-white">
+                    {pair[0]}
+                  </td>
+                  {/* Nước đi của quân Đen (nếu có) */}
+                  <td className="w-[45%] py-2 text-center font-bold text-neutral-300 group-hover:text-white">
+                    {pair[1] || ''}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Action Buttons */}

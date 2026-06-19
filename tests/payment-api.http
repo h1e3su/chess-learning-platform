@@ -1,0 +1,23 @@
+# =============================================
+# PAYMENT SERVICE API TESTS
+# Base URL: http://localhost:8080 (qua Gateway)
+# =============================================
+
+### 1. Lấy danh sách tất cả Đơn Thanh Toán
+GET http://localhost:8080/api/payments
+Accept: application/json
+
+### 2. Lấy chi tiết 1 Đơn Thanh Toán theo UUID (thay ID thật vào)
+GET http://localhost:8080/api/payments/{{orderId}}
+Accept: application/json
+
+### 3. Tạo Đơn Thanh Toán mới
+POST http://localhost:8080/api/payments
+Content-Type: application/json
+
+{
+  "momoOrderId": "MOMO-TEST-001",
+  "userId": "{{userId}}",
+  "courseId": "{{courseId}}",
+  "amount": 299000
+}

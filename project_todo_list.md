@@ -33,11 +33,11 @@ Danh sách công việc (To-Do List) chi tiết cho dự án VantageChess, giúp
 
 ## 🟣 Giai đoạn 4: Core Gameplay & Realtime (Game Focus)
 
-* [ ] **Khởi tạo WebSocket Configuration:** Cấu hình Spring WebFlux WebSocket hoặc STOMP trong `game-service` (`ws://localhost:8080/ws/game`).
-* [ ] **Tích hợp Thư viện Cờ vua (Frontend):** Cài đặt `react-chessboard` và `chess.js` vào dự án React để quản lý logic di chuyển, kiểm tra chiếu tướng (Checkmate) ngay tại Client.
+* [x] **Khởi tạo WebSocket Configuration:** Cấu hình Spring WebFlux WebSocket hoặc STOMP trong `game-service` (`ws://localhost:8080/ws/game`).
+* [x] **Tích hợp Thư viện Cờ vua (Frontend):** Cài đặt `react-chessboard` và `chess.js` vào dự án React để quản lý logic di chuyển, kiểm tra chiếu tướng (Checkmate) ngay tại Client.
 * [ ] **Đồng bộ trạng thái Ván đấu:** Thiết lập luồng gửi/nhận nước đi (Move) qua WebSocket giữa 2 người chơi. Lưu trữ FEN và PGN liên tục vào Redis / PostgreSQL.
 * [ ] **Hệ thống Matchmaking:** Tạo hàng đợi tìm trận dựa trên ELO sử dụng Redis (Matchmaking Queue).
-* [ ] **Tích hợp Stockfish AI:** Tải và chạy Stockfish engine trên backend để phục vụ chế độ đấu PvE (Người vs Máy).
+* [x] **Tích hợp Stockfish AI:** Tải và chạy Stockfish engine trên backend (qua Python worker + RabbitMQ RPC) để phục vụ chế độ đấu PvE (Người vs Máy).
 
 ---
 
