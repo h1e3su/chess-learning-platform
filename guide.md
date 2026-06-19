@@ -46,15 +46,14 @@ docker compose up -d
 > Tài khoản mặc định Postgres: `root` / `rootpassword`.
 
 **Bước 2: Build & Khởi động Backend**
-1. Mở terminal tại `chess-backend` và build toàn bộ:
-   ```bash
-   mvn clean compile
+Thay vì phải mở từng terminal thủ công, hệ thống đã được tích hợp sẵn script tự động chạy tất cả microservices theo đúng trình tự bắt buộc.
+
+1. Mở terminal (PowerShell) tại thư mục `chess-backend`.
+2. Chạy script tự động:
+   ```powershell
+   .\start-all.ps1
    ```
-2. Mở nhiều terminal để chạy từng service theo thứ tự BẮT BUỘC sau:
-   - Terminal 1: Khởi động `eureka-server` (Chờ khởi động xong).
-   - Terminal 2: Khởi động `api-gateway`.
-   - Terminal 3, 4, 5, 6, 7: Lần lượt khởi động `user-service`, `course-service`, `payment-service`, `game-service`, `notification-service`.
-   - Lệnh khởi chạy cho mỗi service: `mvn spring-boot:run`
+> Tác dụng: Script sẽ tự động mở từng cửa sổ PowerShell mới để chạy `mvn spring-boot:run` cho từng service với thời gian chờ hợp lý (`eureka-server` chạy trước 15s).
 
 **Bước 3: Khởi chạy Frontend**
 Mở terminal tại thư mục `frontend`:
@@ -96,7 +95,30 @@ Hệ thống không yêu cầu Client phải nhớ các port `8081` đến `8085
 
 ---
 
-## 4. Nhật Ký Xử Lý Lỗi (Bugs & Fixes Log)
+## 4. Nhật Ký (Changelog)
+
+Dưới đây là nhật ký phát triển ghi nhận các cột mốc quan trọng từ lúc khởi tạo dự án:
+
+### 4.1. Giai đoạn Khởi tạo (Phase 0: Project Setup)
+- Khởi tạo kiến trúc Microservices (Eureka Server, API Gateway, User, Course, Payment, Game, Notification).
+- Cấu hình hạ tầng Docker Compose (PostgreSQL, Redis, RabbitMQ).
+- Hoàn tất Refactor Database từ MongoDB sang 100% PostgreSQL (Polyglot to Monoglot).
+
+### 4.2. Giai đoạn 1: API & API Gateway (Phase 1)
+- Xây dựng API cơ bản (CRUD) cho toàn bộ 5 microservices.
+- Thiết lập Centralized Swagger trên API Gateway (port 8080).
+- Khắc phục lỗi xung đột WebMVC/WebFlux và xử lý CORS toàn cục.
+
+### 4.3. Giai đoạn 2: Giao diện & Luồng Xác thực (Phase 2)
+- Thiết lập Frontend React (Vite + TS + Tailwind CSS).
+- Tạo `uibuild.md` chuẩn hóa Design System (VantageChess style: Glassmorphism, Dark mode, Neon gradients).
+- Hoàn thiện Global Layout gồm Sidebar, MainArena (Bàn cờ, đồng hồ đếm ngược) và RightPanel (Lịch sử nước đi, tabs).
+- Tích hợp `react-router-dom` bảo vệ các route người dùng.
+- Xây dựng form Đăng nhập (Login) / Đăng ký (Register) kết hợp hiệu ứng `framer-motion`.
+- Tích hợp `zustand` quản lý trạng thái xác thực (`useAuthStore`).
+- Thiết lập kết nối Axios Client ban đầu (`authApi.ts`).
+
+### 4.4. Danh sách Bugs & Fixes (Bugs Log)
 
 Dưới đây là những "bài học xương máu" đã gặp phải và cách xử lý:
 
@@ -156,22 +178,20 @@ Dưới đây là những "bài học xương máu" đã gặp phải và cách 
 
 ---
 
-## 5. Lộ Trình Phát Triển (Log & Roadmap)
+## 5. Lộ Trình Phát Triển (Roadmap)
 
 ### 5.1. Những việc ĐÃ LÀM (Done)
-- [x] **Refactor Kiến trúc DB:** Loại bỏ hoàn toàn MongoDB, thống nhất dùng 100% PostgreSQL cho toàn bộ 5 Microservices (Polyglot to Monoglot refactoring).
-- [x] **Setup Hạ tầng Docker:** Viết cấu hình `docker-compose.yml` cho Postgres, Redis, RabbitMQ. Vá lỗi authentication DB.
-- [x] **Tích hợp Swagger OpenAPI:** Tự động sinh tài liệu API cho các microservice thông qua `springdoc-openapi`.
-- [x] **Khởi tạo React Frontend:** Dựng khung project bằng Vite + React + TypeScript. Thiết lập Design System bằng Vanilla CSS mang phong cách Glassmorphism, Dark mode và Micro-animations cực kỳ cao cấp.
-- [x] **Hoàn thiện API cơ bản (CRUD):** Đã code xong `Repository`, `Service`, và `Controller` cho CẢ 5 dịch vụ (`User`, `Course`, `Payment`, `Game`, `Notification`) và cấu hình kết nối DB thành công.
-- [x] **API Gateway & Centralized Swagger:** Fix triệt để bug xung đột kiến trúc WebMVC/WebFlux. Thành công gom tài liệu Swagger của 5 service về cổng `8080`.
-- [x] **Tài liệu hóa Database:** Xuất bản tài liệu `database_schema.md` liệt kê chi tiết các bảng, thuộc tính và cách kết nối Postgres.
+- [x] **Refactor Kiến trúc DB & Setup Hạ tầng:** 100% PostgreSQL, cấu hình Docker Compose (Postgres, Redis, RabbitMQ).
+- [x] **Tích hợp Swagger OpenAPI & Gateway:** Fix xung đột WebMVC/WebFlux, Gom tài liệu về cổng 8080.
+- [x] **Khởi tạo React Frontend & Design System:** Tích hợp Figma MCP Server, setup Vite + React + TS, thiết lập TailwindCSS với phong cách VantageChess.
+- [x] **Xây dựng Global Layout (Frontend):** Thiết kế Sidebar, MainArena (bàn cờ chuẩn E-sports), RightPanel.
+- [x] **Quản lý Xác thực & State (Frontend):** Setup `react-router-dom`, Code xong form Đăng ký / Đăng nhập (animation `framer-motion`), tích hợp `zustand` và `axios` client.
 
 ### 5.2. Những việc ĐANG LÀM (In Progress)
-- [x] **Tích hợp Figma MCP Server:** Hướng dẫn setup biến môi trường / cấu hình JSON cho Figma API Token.
-- [ ] **Kết nối React Frontend với Gateway:** Chuẩn bị viết code Axios để gọi API `/api/users` từ React thông qua port `8080`.
+- [ ] **Xây dựng Trang Chủ (Home):** Hiển thị Dashboard, ELO Chart, thẻ Khóa Học bám sát prototype.
+- [ ] **Kết nối API Xác thực thực tế:** Chuyển đổi mock data sang gọi API thật (`POST /api/users/login`) từ `user-service`.
 
-### 5.3. Những việc SẼ PHẢI LÀM (To-do / Roadmap)
-- [ ] **Code Giao diện Đăng ký / Đăng nhập:** Thiết kế UI form xịn xò, có animation mượt mà trên React.
+### 5.3. Những việc SẼ PHẢI LÀM (To-do)
+- [ ] **Ánh xạ UI E-sports sang Flutter Mobile:** Tạo app mobile dùng codebase Dart bám sát thiết kế React.
 - [ ] **Event-Driven với RabbitMQ:** Thiết lập producer/consumer cho luồng: thanh toán MoMo -> Kích hoạt khóa học -> Gửi email.
-- [ ] **WebSocket cho Game Service:** Viết luồng truyền nhận dữ liệu thời gian thực (real-time) cho các ván cờ, chuẩn bị tích hợp Stockfish.
+- [ ] **WebSocket cho Game Service:** Viết luồng truyền nhận dữ liệu thời gian thực (real-time) cho các ván cờ, tích hợp engine Stockfish.
