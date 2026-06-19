@@ -5,7 +5,9 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "enrollments")
+@Table(name = "enrollments", 
+       uniqueConstraints = {@UniqueConstraint(columnNames = {"user_id", "course_id"})},
+       indexes = {@Index(name = "idx_enrollment_user", columnList = "user_id")})
 public class Enrollment {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

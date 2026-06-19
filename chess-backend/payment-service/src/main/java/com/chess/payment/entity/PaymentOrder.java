@@ -21,8 +21,14 @@ public class PaymentOrder {
     @Column(nullable = false, name = "course_id")
     private UUID courseId;
 
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
+
+    @Column(name = "momo_trans_id")
+    private String momoTransId;
+
+    @Column(name = "extra_data", columnDefinition = "jsonb")
+    private String extraData;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -56,6 +62,10 @@ public class PaymentOrder {
     public void setCourseId(UUID courseId) { this.courseId = courseId; }
     public BigDecimal getAmount() { return amount; }
     public void setAmount(BigDecimal amount) { this.amount = amount; }
+    public String getMomoTransId() { return momoTransId; }
+    public void setMomoTransId(String momoTransId) { this.momoTransId = momoTransId; }
+    public String getExtraData() { return extraData; }
+    public void setExtraData(String extraData) { this.extraData = extraData; }
     public PaymentStatus getStatus() { return status; }
     public void setStatus(PaymentStatus status) { this.status = status; }
     public LocalDateTime getCreatedAt() { return createdAt; }

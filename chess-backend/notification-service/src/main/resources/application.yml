@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: notification-service
+  rabbitmq:
+    host: 127.0.0.1
+    port: 5672
+    username: root
+    password: rootpassword
   datasource:
     url: jdbc:postgresql://127.0.0.1:5433/chess_db
     username: root

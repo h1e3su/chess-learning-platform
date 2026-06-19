@@ -1,5 +1,6 @@
 import { BookOpen, Gamepad2, LayoutDashboard, Puzzle, User, LogOut, ChevronLeft } from 'lucide-react';
 import React from 'react';
+import { NavLink } from 'react-router-dom';
 import { useAuthStore } from '../../store/useAuthStore';
 
 export function Sidebar() {
@@ -19,12 +20,12 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1">
-        <SidebarItem icon={<LayoutDashboard />} label="Trang chủ" active />
-        <SidebarItem icon={<Gamepad2 />} label="Chơi ngay" />
-        <SidebarItem icon={<Puzzle />} label="Bài tập" />
-        <SidebarItem icon={<BookOpen />} label="Khóa học" />
+        <SidebarItem icon={<LayoutDashboard />} label="Trang chủ" to="/home" />
+        <SidebarItem icon={<Gamepad2 />} label="Chơi ngay" to="/play" />
+        <SidebarItem icon={<Puzzle />} label="Bài tập" to="/puzzles" />
+        <SidebarItem icon={<BookOpen />} label="Khóa học" to="/courses" />
         <div className="my-4 border-t border-neutral-800/50 pt-4" />
-        <SidebarItem icon={<User />} label="Hồ sơ" />
+        <SidebarItem icon={<User />} label="Hồ sơ" to="/profile" />
       </nav>
 
       <button className="flex items-center gap-2 px-4 py-2 mt-auto mb-4 text-sm text-neutral-400 hover:text-white transition-colors border border-neutral-800 rounded-lg hover:bg-neutral-800">
@@ -53,11 +54,16 @@ export function Sidebar() {
   );
 }
 
-function SidebarItem({ icon, label, active = false }: { icon: React.ReactNode; label: string; active?: boolean }) {
+function SidebarItem({ icon, label, to }: { icon: React.ReactNode; label: string; to: string }) {
   return (
-    <a href="#" className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${active ? 'bg-cyan-500/10 text-cyan-400' : 'text-neutral-400 hover:text-white hover:bg-neutral-800/50'}`}>
-      {React.cloneElement(icon as React.ReactElement, { className: 'w-5 h-5' })}
+    <NavLink 
+      to={to} 
+      className={({ isActive }) => 
+        `flex items-center gap-3 px-3 py-3 rounded-lg transition-all ${isActive ? 'bg-cyan-500/10 text-cyan-400' : 'text-neutral-400 hover:text-white hover:bg-neutral-800/50'}`
+      }
+    >
+      {React.cloneElement(icon as React.ReactElement<any>, { className: 'w-5 h-5' })}
       <span className="font-medium text-sm">{label}</span>
-    </a>
+    </NavLink>
   );
 }

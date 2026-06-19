@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import java.util.UUID;
 
 @Entity
-@Table(name = "lessons")
+@Table(name = "lessons", indexes = {@Index(name = "idx_lesson_course", columnList = "course_id")})
 public class Lesson {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

@@ -66,4 +66,17 @@ public class UserService {
         dto.setCreatedAt(user.getCreatedAt());
         return dto;
     }
+
+    public com.chess.user.dto.LoginResponse authenticate(com.chess.user.dto.LoginRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("Sai email hoặc mật khẩu"));
+        
+        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            throw new RuntimeException("Sai email hoặc mật khẩu");
+        }
+        
+        // Return simple UUID token for Phase 2 basic auth flow
+        String token = "vantage_" + UUID.randomUUID().toString();
+        return new com.chess.user.dto.LoginResponse(token, mapToDto(user));
+    }
 }

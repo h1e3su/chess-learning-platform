@@ -19,20 +19,19 @@ export function Login() {
     setIsLoading(true);
 
     try {
-      // Mocking for now. Replace with actual API call when ready.
-      // const data = await authApi.login({ email, password });
+      const data = await authApi.login({ email, password });
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800));
+      login({ 
+        id: data.user.id, 
+        username: data.user.username, 
+        email: data.user.email, 
+        elo: data.user.eloRating || 1200, 
+        rank: 'Tân binh' 
+      }, data.token);
       
-      if (email === 'admin@vantage.com' && password === 'admin') {
-        login({ id: 1, username: 'Lê Quang Liêm', email, elo: 2458, rank: 'Kim Cương III' }, 'fake-jwt-token');
-        navigate('/');
-      } else {
-        throw new Error('Sai email hoặc mật khẩu (Thử admin@vantage.com / admin)');
-      }
+      navigate('/');
     } catch (err: any) {
-      setError(err.message || 'Đã có lỗi xảy ra');
+      setError(err.response?.data?.message || err.message || 'Đã có lỗi xảy ra');
     } finally {
       setIsLoading(false);
     }

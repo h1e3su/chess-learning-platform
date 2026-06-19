@@ -56,19 +56,20 @@ Thông tin các khóa học cờ vua.
 **Bảng `lessons`**
 Quản lý các bài giảng/bài tập thuộc về một khóa học.
 - `id` (UUID, PK): Khóa chính.
-- `course_id` (UUID, Not Null): Khóa ngoại (logical) chỉ định khóa học chứa bài giảng này.
+- `course_id` (UUID, Not Null): Khóa ngoại (logical). **[Đã Index]**
 - `title` (VARCHAR, Not Null): Tên bài học.
-- `video_url` (VARCHAR): Link video (nếu là bài giảng video).
-- `order_index` (INTEGER, Not Null): Thứ tự bài học trong danh sách khóa học.
+- `video_url` (VARCHAR): Link video.
+- `order_index` (INTEGER, Not Null): Thứ tự bài học.
 - `type` (VARCHAR, Enum, Not Null): Loại bài học (VIDEO, PUZZLE, TEXT).
 
 **Bảng `enrollments`**
-Bảng trung gian quản lý việc ghi danh khóa học của học viên.
+Bảng quản lý việc ghi danh khóa học của học viên.
 - `id` (UUID, PK): Khóa chính.
-- `user_id` (UUID, Not Null): ID của học viên.
+- `user_id` (UUID, Not Null): ID của học viên. **[Đã Index]**
 - `course_id` (UUID, Not Null): ID của khóa học.
 - `enrolled_at` (TIMESTAMP, Not Null): Thời gian ghi danh.
-- `status` (VARCHAR, Enum, Not Null): Trạng thái học (ACTIVE, COMPLETED, CANCELLED).
+- `status` (VARCHAR, Enum, Not Null): Trạng thái (ACTIVE, COMPLETED, CANCELLED).
+*(Ràng buộc: `UNIQUE(user_id, course_id)` để đảm bảo một user chỉ được mua một khóa học duy nhất)*
 
 ---
 
@@ -77,13 +78,15 @@ Bảng trung gian quản lý việc ghi danh khóa học của học viên.
 **Bảng `payment_orders`**
 Lưu trữ thông tin các giao dịch mua khóa học/nạp tiền.
 - `id` (UUID, PK): Khóa chính.
-- `momo_order_id` (VARCHAR, Unique, Not Null): Mã giao dịch sinh ra cho MoMo.
+- `momo_order_id` (VARCHAR, Unique, Not Null): Mã giao dịch hệ thống sinh ra.
+- `momo_trans_id` (VARCHAR): Mã giao dịch thực tế từ MoMo trả về (Dùng cho đối soát kế toán/Refund).
 - `user_id` (UUID, Not Null): ID của người thanh toán.
 - `course_id` (UUID, Not Null): ID của khóa học đang được mua.
-- `amount` (NUMERIC, Not Null): Số tiền thanh toán.
-- `status` (VARCHAR, Enum, Not Null): Trạng thái giao dịch (PENDING, SUCCESS, FAILED).
+- `amount` (NUMERIC(12,2), Not Null): Số tiền thanh toán (Chính xác đến 2 chữ số thập phân).
+- `extra_data` (JSONB): Toàn bộ log raw từ MoMo (Đề phòng tranh chấp giao dịch).
+- `status` (VARCHAR, Enum, Not Null): Trạng thái (PENDING, SUCCESS, FAILED).
 - `created_at` (TIMESTAMP): Thời điểm tạo đơn.
-- `updated_at` (TIMESTAMP): Thời điểm cập nhật cuối cùng (khi MoMo gửi callback).
+- `updated_at` (TIMESTAMP): Thời điểm cập nhật cuối cùng.
 
 ---
 
@@ -91,14 +94,14 @@ Lưu trữ thông tin các giao dịch mua khóa học/nạp tiền.
 
 **Bảng `game_matches`**
 Quản lý trạng thái và nước đi của một ván cờ.
-- `id` (UUID, PK): Khóa chính của ván đấu.
+- `id` (UUID, PK): Khóa chính.
 - `white_player_id` (UUID): ID của người cầm quân Trắng.
 - `black_player_id` (UUID): ID của người cầm quân Đen.
-- `pgn` (TEXT): Chuỗi Portable Game Notation (Lịch sử các nước đi của ván cờ).
-- `fen` (VARCHAR): Forsyth-Edwards Notation (Trạng thái bàn cờ hiện tại).
+- `pgn` (TEXT): Lịch sử các nước đi (Lưu ý: Chỉ ghi xuống PostgreSQL khi ván cờ đã COMPLETED, trạng thái LIVE được lưu trên Redis để tránh nghẽn I/O).
+- `fen` (VARCHAR): Trạng thái bàn cờ hiện tại.
 - `status` (VARCHAR, Enum, Not Null): Trạng thái ván đấu (WAITING, PLAYING, COMPLETED, ABORTED).
-- `start_time` (TIMESTAMP): Thời điểm bắt đầu đánh.
-- `end_time` (TIMESTAMP): Thời điểm kết thúc ván.
+- `start_time` (TIMESTAMP): Thời điểm bắt đầu.
+- `end_time` (TIMESTAMP): Thời điểm kết thúc.
 
 ---
 
@@ -107,9 +110,15 @@ Quản lý trạng thái và nước đi của một ván cờ.
 **Bảng `notifications`**
 Ghi nhận các thông báo hệ thống gửi đến người dùng.
 - `id` (UUID, PK): Khóa chính.
-- `user_id` (UUID, Not Null): ID của người nhận thông báo.
+- `user_id` (UUID, Not Null): ID của người nhận thông báo. **[Đã Index]**
 - `title` (VARCHAR): Tiêu đề thông báo.
 - `message` (TEXT): Nội dung thông báo.
-- `type` (VARCHAR, Enum, Not Null): Loại thông báo (SYSTEM, PROMOTIONAL, GAME_INVITE, PAYMENT_ALERT).
-- `is_read` (BOOLEAN, Not Null): Đã đọc hay chưa (Mặc định: false).
+- `type` (VARCHAR, Enum, Not Null): Loại thông báo.
+- `is_read` (BOOLEAN, Not Null): Đã đọc hay chưa.
 - `created_at` (TIMESTAMP): Thời điểm tạo thông báo.
+
+---
+
+## 3. Quy Trình Vận Hành (DevOps Note)
+Việc sử dụng `ddl-auto: update` rất tiện trong môi trường phát triển (Dev) để tự động ánh xạ cấu trúc từ Java Entity xuống Postgres. Tuy nhiên, `update` không thể xóa cột hoặc đổi tên cột an toàn (sẽ sinh ra cột mới và bỏ hoang cột cũ).
+**Chiến lược dài hạn:** Trong các Phase sau (đặc biệt khi lên Production), hệ thống sẽ cần chuyển đổi sang sử dụng **Flyway** hoặc **Liquibase** để quản lý phiên bản database (Database Migration) nhằm kiểm soát tuyệt đối cấu trúc lược đồ dữ liệu.

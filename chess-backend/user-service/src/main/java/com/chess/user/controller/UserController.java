@@ -59,4 +59,20 @@ public class UserController {
         UserDto createdUser = userService.createUser(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdUser);
     }
+
+    @Operation(summary = "Login user", description = "Authenticates a user and returns a token")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Login successful",
+                    content = @Content(schema = @Schema(implementation = com.chess.user.dto.LoginResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid credentials")
+    })
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody com.chess.user.dto.LoginRequest request) {
+        try {
+            com.chess.user.dto.LoginResponse response = userService.authenticate(request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(java.util.Map.of("message", e.getMessage()));
+        }
+    }
 }
