@@ -4,13 +4,8 @@ server:
 spring:
   application:
     name: notification-service
-  rabbitmq:
-    host: 127.0.0.1
-    port: 5672
-    username: root
-    password: rootpassword
   datasource:
-    url: jdbc:postgresql://127.0.0.1:5433/chess_db
+    url: jdbc:postgresql://localhost:5433/chess_db
     username: root
     password: rootpassword
     driver-class-name: org.postgresql.Driver
@@ -20,11 +15,18 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-
+        format_sql: true
+    show-sql: true
+  rabbitmq:
+    host: localhost
+    username: root
+    password: rootpassword
 eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
-
   instance:
     prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URI:http://localhost:8761/eureka/}
+    fetch-registry: true
+    register-with-eureka: true

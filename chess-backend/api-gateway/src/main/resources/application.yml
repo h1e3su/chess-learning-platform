@@ -7,69 +7,53 @@ spring:
   cloud:
     gateway:
       globalcors:
-        corsConfigurations:
+        cors-configurations:
           '[/**]':
-            allowedOrigins: 
-              - "http://localhost:5173"
-            allowedMethods:
-              - GET
-              - POST
-              - PUT
-              - DELETE
-              - OPTIONS
+            # Lấy tên miền từ biến môi trường FRONTEND_URL, nếu không có thì mặc định cho phép localhost
+            allowedOriginPatterns: "${FRONTEND_URL:http://localhost:5173}" 
+            allowedMethods: "*"
             allowedHeaders: "*"
-            allowCredentials: true
+            allowedCredentials: true
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
       routes:
-        - id: user-service
-          uri: lb://USER-SERVICE
-          predicates:
-            - Path=/api/users/**, /user-service/v3/api-docs/**
-          filters:
-            - RewritePath=/user-service/(?<segment>.*), /$\{segment}
-        - id: course-service
-          uri: lb://COURSE-SERVICE
-          predicates:
-            - Path=/api/courses/**, /course-service/v3/api-docs/**
-          filters:
-            - RewritePath=/course-service/(?<segment>.*), /$\{segment}
-        - id: payment-service
-          uri: lb://PAYMENT-SERVICE
-          predicates:
-            - Path=/api/payments/**, /payment-service/v3/api-docs/**
-          filters:
-            - RewritePath=/payment-service/(?<segment>.*), /$\{segment}
-        - id: game-service
+        # Sử dụng lb:// (Load Balancer) để gọi qua Eureka thay vì gọi localhost
+        - id: game-service-ws
           uri: lb://GAME-SERVICE
           predicates:
-            - Path=/api/games/**, /game-service/v3/api-docs/**
-          filters:
-            - RewritePath=/game-service/(?<segment>.*), /$\{segment}
-        - id: notification-service
+            - Path=/ws/game/**
+            
+        - id: game-service-api
+          uri: lb://GAME-SERVICE
+          predicates:
+            - Path=/api/games/**
+            
+        - id: user-service-api
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/api/users/**, /api/auth/**
+            
+        - id: course-service-api
+          uri: lb://COURSE-SERVICE
+          predicates:
+            - Path=/api/courses/**
+            
+        - id: payment-service-api
+          uri: lb://PAYMENT-SERVICE
+          predicates:
+            - Path=/api/payments/**
+            
+        - id: notification-service-api
           uri: lb://NOTIFICATION-SERVICE
           predicates:
-            - Path=/api/notifications/**, /notification-service/v3/api-docs/**
-          filters:
-            - RewritePath=/notification-service/(?<segment>.*), /$\{segment}
+            - Path=/api/notifications/**
 
 eureka:
-  instance:
-    prefer-ip-address: true
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
-
-springdoc:
-  swagger-ui:
-    urls:
-      - name: User API
-        url: /user-service/v3/api-docs
-      - name: Course API
-        url: /course-service/v3/api-docs
-      - name: Payment API
-        url: /payment-service/v3/api-docs
-      - name: Game API
-        url: /game-service/v3/api-docs
-      - name: Notification API
-        url: /notification-service/v3/api-docs
-
-
+      # Sử dụng biến môi trường cho Eureka, mặc định là localhost cho dev
+      defaultZone: "${EUREKA_URI:http://localhost:8761/eureka/}"

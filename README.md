@@ -173,3 +173,26 @@ Common variables configured across `application.yml` files:
 | `spring.datasource.username` | DB Username | `root` |
 | `spring.datasource.password` | DB Password | `rootpassword` |
 | `eureka.client.serviceUrl.defaultZone`| Eureka Server URL | `http://localhost:8761/eureka/` |
+
+---
+
+## Enterprise Configuration & Gotchas
+
+To ensure seamless transition from local development (Windows/macOS) to production (Docker/Kubernetes), we have implemented several enterprise-grade configurations:
+
+### 1. Eureka DNS Resolution on Windows
+When running Eureka locally on Windows, microservices default to registering with the host's DNS name (e.g., `*.mshome.net`). This causes `UnknownHostException` in the API Gateway.
+**Solution:** All microservices are configured with `eureka.instance.prefer-ip-address=true` to force IP-based registration.
+
+### 2. Eureka Warm-up Time (503 Errors)
+After starting the system with `start-all.ps1`, the API Gateway might temporarily throw `503 Service Unavailable` or `No servers available`.
+**Reason:** The Spring Cloud LoadBalancer fetches the registry from Eureka every 30 seconds. Heavy services (like `game-service`) take time to start and register.
+**Solution:** Wait 60-90 seconds after running the startup script before hitting the frontend.
+
+### 3. API Gateway Duplicate CORS Headers
+If both the API Gateway (`globalcors`) and a backend service (e.g., `game-service` WebSocket configuration) attempt to add CORS headers, the browser will block the request due to duplicate values.
+**Solution:** The API Gateway is equipped with a `DedupeResponseHeader` filter using the `RETAIN_UNIQUE` strategy to merge and clean up duplicate CORS headers automatically.
+
+### 4. SockJS & WebSocket Routing
+SockJS uses HTTP requests (`/info`) for its initial handshake before upgrading to WebSockets.
+**Solution:** The API Gateway route uses the standard `lb://GAME-SERVICE` instead of `lb:ws://GAME-SERVICE`. This allows the initial HTTP handshake to succeed, and Spring Cloud Gateway handles the subsequent WebSocket upgrade natively.

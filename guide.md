@@ -208,6 +208,55 @@ Dưới đây là những "bài học xương máu" đã gặp phải và cách 
   2. Cụ thể: `course-service` tự khai báo `new Queue("course.payment.queue", true)`, `notification-service` tự khai báo `new Queue("notification.payment.queue", true)`.
   3. Nhờ vậy, mỗi service sẽ tự tạo Queue nếu nó chưa tồn tại, bất kể thứ tự khởi chạy.
 
+### 🐛 Bug 9: Duplicate CORS Headers ở API Gateway (`multiple values 'http://localhost:5173, ...'`)
+- **Mô tả:** Frontend báo lỗi CORS nhưng lý do là `Access-Control-Allow-Origin` header chứa tới 2 giá trị giống hệt nhau.
+- **Nguyên nhân:** Cả API Gateway (qua `globalcors`) và `game-service` (qua `.setAllowedOriginPatterns("*")` trong `WebSocketConfig`) đều cố gắng gắn thêm Header CORS vào Response, khiến Header bị nhân đôi và trình duyệt từ chối.
+- **Cách khắc phục:** 
+  Thêm filter `DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_UNIQUE` vào `default-filters` của `api-gateway` để nó tự gộp các CORS header bị trùng lặp lại thành 1.
+
+### 🐛 Bug 10: Spring Websocket âm thầm nuốt STOMP Message (`@Payload` không hoạt động)
+- **Mô tả:** Frontend báo đã gửi STOMP message thành công (`stompClient.publish()`), nhưng Backend Controller (`@MessageMapping`) không hề nhận được và không văng bất kỳ lỗi nào.
+- **Nguyên nhân:** Mặc định `stompClient` gửi dữ liệu đi dưới định dạng `text/plain`. Tuy nhiên Controller Java lại dùng `@Payload PvEMoveRequest` (yêu cầu định dạng JSON). Do không khớp kiểu, Spring Boot đã âm thầm huỷ message.
+- **Cách khắc phục:**
+  Luôn luôn bổ sung `headers: { 'content-type': 'application/json' }` vào hàm `publish` trên Frontend.
+
+### 🐛 Bug 11: Java Backend không kết nối được RabbitMQ (Silent Failure)
+- **Mô tả:** Hàm `rabbitTemplate.convertSendAndReceive` được gọi nhưng không bao giờ ném request vào queue, làm cho Frontend đứng chờ vô tận.
+- **Nguyên nhân:** `game-service/application.yml` quên chưa cấu hình `spring.rabbitmq.username` và `password`. Spring dùng tài khoản mặc định `guest` để kết nối vào RabbitMQ Docker (đang yêu cầu tài khoản `root`). Kết nối thất bại ngầm.
+- **Cách khắc phục:** 
+  Bổ sung khối cấu hình `spring.rabbitmq.host`, `port`, `username`, `password` đầy đủ vào file `application.yml` của service con.
+
+### 🐛 Bug 12: Python Worker thiếu binary (Errno 2: No such file or directory: 'stockfish')
+- **Mô tả:** Python worker nhận được request FEN nhưng ném lỗi không tìm thấy `stockfish`.
+- **Nguyên nhân:** Dù đã thêm lệnh `apt-get install -y stockfish` vào `Dockerfile`, nhưng khi chạy `docker-compose up -d`, Docker mặc định dùng lại Image cũ (cũ kĩ, chưa có stockfish) thay vì tự động build lại. Mặc khác, Stockfish được cài qua `apt-get` nằm ở `/usr/games/stockfish` chứ không nằm trong thư mục làm việc hiện tại hay trong `$PATH` mặc định.
+- **Cách khắc phục:**
+  1. Cập nhật đường dẫn tuyệt đối trong code Python: `STOCKFISH_PATH = "/usr/games/stockfish"` thay vì chỉ gọi `stockfish`.
+  2. Ép Docker đập đi xây lại bằng cờ `--build`: `docker-compose up -d --build stockfish_worker`
+
+### 🐛 Bug 13: Vòng lặp Re-render cắt đứt kết nối WebSocket
+- **Mô tả:** Frontend gửi lệnh nhưng không bao giờ nhận được phản hồi, trong khi đó Console liên tục báo `Connected to WebSocket` lặp đi lặp lại.
+- **Nguyên nhân:** Hook `useGameSocket` có dependency array chứa hàm callback `onMoveReceived`. Hàm này được định nghĩa inline trong component `PlayArena`. Mỗi khi đi một nước cờ, `PlayArena` re-render -> hàm `onMoveReceived` bị tạo lại với địa chỉ ô nhớ mới -> `useEffect` trong `useGameSocket` chạy hàm dọn dẹp ngắt kết nối (disconnect) và thiết lập kết nối mới đúng vào khoảnh khắc AI chuẩn bị trả kết quả về.
+- **Cách khắc phục:** 
+  Sử dụng tuyệt kỹ `useRef` để giữ bản sao mới nhất của callback mà không làm kích hoạt lại `useEffect`:
+  ```typescript
+  const onMoveReceivedRef = useRef(onMoveReceived);
+  useEffect(() => { onMoveReceivedRef.current = onMoveReceived; }, [onMoveReceived]);
+  // Ở useEffect cấu hình Socket, chỉ dùng dependency [matchId], không truyền onMoveReceived.
+  ```
+
+### 🐛 Bug 14: Lỗi 500 UnknownHostException và 503 No servers available (Eureka Warm-up)
+- **Mô tả:** Frontend gọi qua API Gateway bị văng lỗi 500 (khi dùng Gateway) hoặc 503 (No servers available) dù các service con đã chạy.
+- **Nguyên nhân 1 (Lỗi DNS Windows):** Khi dùng `lb://GAME-SERVICE`, Eureka trả về Hostname của Windows (`*.mshome.net`) khiến trình giải mã DNS của Gateway (Netty) không hiểu và văng lỗi 500 `UnknownHostException`.
+- **Cách khắc phục 1:** Thêm `eureka.instance.prefer-ip-address: true` vào TẤT CẢ các microservice để ép Eureka đăng ký bằng IP thật thay vì Hostname.
+- **Nguyên nhân 2 (Warm-up Time):** Spring Cloud Gateway lấy danh sách service từ Eureka mỗi 30 giây. Khi vừa chạy script `start-all.ps1`, `game-service` (khởi động chậm do kết nối DB/RabbitMQ) chưa kịp đăng ký, hoặc Gateway chưa tới chu kỳ lấy dữ liệu mới, dẫn tới báo lỗi 503.
+- **Cách khắc phục 2:** Đây là đặc tả bình thường của kiến trúc Microservices. Chỉ cần chờ 60-90 giây sau khi start server rồi F5 lại trình duyệt. (Ở môi trường Dev có thể ép `spring.cloud.loadbalancer.cache.enabled: false` để tắt cache).
+
+### 🐛 Bug 15: Cấu hình CORS `DedupeResponseHeader` sai vị trí
+- **Mô tả:** Dù đã thêm cấu hình `DedupeResponseHeader` để lọc CORS trùng lặp nhưng trình duyệt vẫn báo lỗi Duplicate Header `multiple values 'http://localhost:5173, http://localhost:5173'`.
+- **Nguyên nhân:** Đặt nhầm `default-filters` vào bên trong block `cors-configurations` (của `globalcors`).
+- **Cách khắc phục:** Phải đặt `default-filters` ở ngang hàng với `globalcors` (nằm trực tiếp dưới `spring.cloud.gateway`), đồng thời thêm cờ `RETAIN_UNIQUE` để Gateway tự động loại bỏ các header giống hệt nhau do WebFlux và Spring MVC cùng nhét vào.
+
+
 ---
 
 ## 5. Lộ Trình Phát Triển (Roadmap)
@@ -241,7 +290,8 @@ Dưới đây là những "bài học xương máu" đã gặp phải và cách 
 - **Logic Layer (The Brain):** Sử dụng `chess.js` giữ dưới dạng biến instance (bọc qua `useMemo` hoặc khai báo ngoài component) để tính toán luật cờ. `chess.js` không bao giờ trigger re-render trực tiếp.
 - **State Management:** Khi `chess.js` xác nhận nước đi hợp lệ, ta mới lấy FEN cập nhật vào React State (`setFen`). Việc này báo cho React biết: *"Này, dữ liệu thay đổi rồi, vẽ lại cái bàn cờ đi"*. Nếu sai luật, state không đổi, React không làm gì, bàn cờ tự giật quân về chỗ cũ.
 
-### 6.2. Tách biệt Socket Layer và Message STOMP
+### 6.2. Tách biệt Socket Layer và Message STOMP (SockJS & Gateway)
+- **SockJS & Quá trình Handshake:** Khác với WebSocket thuần túy (`ws://`), SockJS bắt đầu bằng các HTTP request thông thường (gọi tới `/ws/game/info`) để "đàm phán" với Backend xem trình duyệt có hỗ trợ WebSocket hay không. Do đó, API Gateway chỉ cần định tuyến chuẩn HTTP (`lb://GAME-SERVICE` với `Path=/ws/game/**`) là luồng đàm phán này sẽ tự động được Gateway Upgrade thành WebSocket mà không cần cấu hình giao thức `ws://` lằng nhằng.
 - **STOMP (Simple Text Oriented Messaging Protocol):** Là giao thức giúp chúng ta gửi message có cấu trúc (header, body) qua WebSocket, tương tự như HTTP.
 - **Tách Lớp (Decoupling):** Không bao giờ nhét code `new SockJS()` hay `stompClient.connect()` trực tiếp vào trong component giao diện `PlayArena.tsx`. Chúng sẽ được tách ra một **Custom Hook** (ví dụ: `useGameSocket.ts`) hoặc **Zustand Store**.
 - **Luồng dữ liệu (Data Flow):** 
